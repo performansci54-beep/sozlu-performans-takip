@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#2563eb" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <title>Sözlü &amp; Performans Not Girişi</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; -webkit-tap-highlight-color: transparent; }
+    .fade-in { animation: fade .18s ease-out; }
+    @keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+    input, select, textarea, button { font-family: inherit; }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
+</head>
+<body class="text-slate-800">
+  <div id="app" class="max-w-lg mx-auto min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="bg-blue-600 text-white px-4 py-3 flex items-center justify-between shadow-md sticky top-0 z-20">
+      <div class="flex items-center gap-2">
+        <span class="text-xl">📋</span>
+        <div>
+          <h1 class="font-semibold leading-tight">Sözlü &amp; Performans</h1>
+          <p class="text-[11px] text-blue-100 leading-tight" id="teacherLabel">Not Girişi</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-1">
+        <span id="netDot" title="Bağlantı" class="w-2.5 h-2.5 rounded-full bg-slate-300"></span>
+        <button id="btnSettings" class="p-2 rounded-lg hover:bg-blue-500 active:bg-blue-700" title="Ayarlar" aria-label="Ayarlar">⚙️</button>
+      </div>
+    </header>
+
+    <main class="flex-1 p-4 space-y-4">
+
+      <!-- Adım 1: Sınıf -->
+      <section class="bg-white rounded-2xl shadow-sm p-4">
+        <label class="block text-sm font-semibold text-slate-600 mb-2">1️⃣ Sınıf seç</label>
+        <select id="selClass" class="w-full border border-slate-300 rounded-xl px-3 py-3 text-base bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
+          <option value="">— Sınıf seçin —</option>
+        </select>
+      </section>
+
+      <!-- Adım 2: Öğrenci -->
+      <section id="secStudent" class="bg-white rounded-2xl shadow-sm p-4 hidden">
+        <div class="flex items-center justify-between mb-2">
+          <label class="block text-sm font-semibold text-slate-600">2️⃣ Öğrenci seç</label>
+          <span id="studentCount" class="text-xs text-slate-400"></span>
+        </div>
+        <input id="studentSearch" type="search" inputmode="search" placeholder="Ara: ad veya numara…"
+               class="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-base mb-2 focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+        <div id="studentList" class="max-h-64 overflow-y-auto no-scrollbar space-y-1 pr-1"></div>
+      </section>
+
+      <!-- Adım 3: Not girişi -->
+      <section id="secEntry" class="bg-white rounded-2xl shadow-sm p-4 hidden">
+        <div id="selectedStudentBar" class="flex items-center justify-between bg-blue-50 border border-blue-100 rounded-xl px-3 py-2 mb-3">
+          <div>
+            <p class="text-xs text-blue-500">Seçili öğrenci</p>
+            <p id="selectedStudentName" class="font-semibold text-blue-800"></p>
+          </div>
+          <button id="btnChangeStudent" class="text-xs text-blue-600 underline">değiştir</button>
+        </div>
+
+        <label class="block text-sm font-semibold text-slate-600 mb-2">3️⃣ Kategori</label>
+        <div id="categoryChips" class="flex flex-wrap gap-2 mb-4"></div>
+
+        <label class="block text-sm font-semibold text-slate-600 mb-1">Not (puan)</label>
+        <input id="grade" type="number" min="0" max="100" inputmode="numeric" placeholder="0 – 100"
+               class="w-full border border-slate-300 rounded-xl px-3 py-3 text-lg font-semibold text-center focus:ring-2 focus:ring-blue-500 focus:outline-none mb-4" />
+
+        <label class="block text-sm font-semibold text-slate-600 mb-1">Gerekçe / Açıklama</label>
+        <textarea id="reason" rows="2" placeholder="Örn: Derse aktif katıldı, konuyu doğru anlattı…"
+                  class="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-base focus:ring-2 focus:ring-blue-500 focus:outline-none"></textarea>
+        <div id="reasonChips" class="flex flex-wrap gap-2 mt-2 mb-4"></div>
+
+        <button id="btnSave" class="w-full bg-blue-600 text-white font-semibold py-3.5 rounded-xl shadow-sm hover:bg-blue-700 active:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed">
+          💾 Kaydet
+        </button>
+
+        <!-- Öğrenci geçmişi -->
+        <div id="historyBox" class="mt-4 pt-3 border-t border-slate-100 hidden">
+          <p class="text-xs font-semibold text-slate-500 mb-2" id="historyTitle">Bu öğrencinin son notları</p>
+          <div id="historyList" class="space-y-1.5 text-sm"></div>
+        </div>
+      </section>
+
+      <!-- Boş durum / kurulum uyarısı -->
+      <section id="setupHint" class="bg-amber-50 border border-amber-200 text-amber-800 rounded-2xl p-4 text-sm hidden">
+        <p class="font-semibold mb-1">⚠️ Henüz bağlantı kurulmadı</p>
+        <p>Ayarlar (⚙️) bölümünden Google Apps Script bağlantı adresini girin. Kurulum adımları için <span class="font-medium">KURULUM.md</span> dosyasına bakın. Şu an <b>demo öğrenci listesi</b> gösteriliyor.</p>
+      </section>
+
+    </main>
+
+    <footer class="text-center text-[11px] text-slate-400 py-3" id="queueFooter"></footer>
+  </div>
+
+  <!-- Ayarlar Modalı -->
+  <div id="settingsModal" class="fixed inset-0 bg-black/40 z-30 hidden items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl shadow-xl max-h-[92vh] overflow-y-auto no-scrollbar fade-in">
+      <div class="flex items-center justify-between px-4 py-3 border-b border-slate-100 sticky top-0 bg-white">
+        <h2 class="font-semibold">⚙️ Ayarlar</h2>
+        <button id="btnCloseSettings" class="p-2 text-slate-400 hover:text-slate-700">✕</button>
+      </div>
+      <div class="p-4 space-y-4">
+        <div>
+          <label class="block text-sm font-semibold text-slate-600 mb-1">Öğretmen adı</label>
+          <input id="cfgTeacher" type="text" placeholder="Adınız Soyadınız"
+                 class="w-full border border-slate-300 rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-slate-600 mb-1">Google Apps Script bağlantı adresi (Web App URL)</label>
+          <input id="cfgUrl" type="url" placeholder="https://script.google.com/macros/s/.../exec"
+                 class="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+          <p class="text-[11px] text-slate-400 mt-1">Bu adres, Google Sheet'inize bağlı Apps Script projesini "Web App" olarak dağıttığınızda verilir. Kurulum: KURULUM.md</p>
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-slate-600 mb-1">Kategoriler (virgülle ayırın)</label>
+          <input id="cfgCategories" type="text"
+                 class="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-slate-600 mb-1">Hazır gerekçeler (virgülle ayırın)</label>
+          <input id="cfgReasons" type="text"
+                 class="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+        </div>
+        <div class="flex gap-2">
+          <button id="btnTest" class="flex-1 border border-blue-600 text-blue-600 font-medium py-2.5 rounded-xl hover:bg-blue-50">🔌 Bağlantıyı test et</button>
+          <button id="btnRefreshRoster" class="flex-1 border border-slate-300 text-slate-600 font-medium py-2.5 rounded-xl hover:bg-slate-50">🔄 Listeyi yenile</button>
+        </div>
+        <p id="testResult" class="text-sm"></p>
+        <button id="btnSaveSettings" class="w-full bg-blue-600 text-white font-semibold py-3 rounded-xl hover:bg-blue-700">Kaydet</button>
+
+        <!-- e-Okul içe aktarma -->
+        <div class="border-t border-slate-100 pt-4 mt-2">
+          <label class="block text-sm font-semibold text-slate-600 mb-1">📥 Öğrenci listesini e-Okul'dan aktar</label>
+          <p class="text-[11px] text-slate-400 mb-2">e-Okul → Sınıf Listesi çıktısını (.xls) yükleyin, sadece kendi sınıflarınızı seçin. Liste her güncellendiğinde yeni dosyayı yükleyip aynı sınıfları tekrar aktarın.</p>
+          <input id="eokulFile" type="file" accept=".xls,.xlsx"
+                 class="w-full text-sm text-slate-600 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-blue-50 file:text-blue-700 file:font-medium mb-2" />
+          <div id="importArea" class="hidden">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-xs font-semibold text-slate-500" id="importFound"></span>
+              <button id="btnToggleAll" type="button" class="text-xs text-blue-600 underline">Tümünü seç/kaldır</button>
+            </div>
+            <div id="classChecklist" class="max-h-48 overflow-y-auto no-scrollbar border border-slate-200 rounded-xl p-2 space-y-1 mb-2"></div>
+            <label class="flex items-center gap-2 text-xs text-slate-600 mb-2">
+              <input type="checkbox" id="importReplace" checked class="rounded" />
+              Mevcut listenin yerine yaz (kaldırılan öğrenciler silinir)
+            </label>
+            <button id="btnImport" type="button" class="w-full bg-emerald-600 text-white font-semibold py-2.5 rounded-xl hover:bg-emerald-700 disabled:opacity-50">Seçili sınıfları aktar</button>
+            <p id="importResult" class="text-sm mt-2"></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="fixed bottom-5 left-1/2 -translate-x-1/2 z-40 hidden">
+    <div id="toastInner" class="px-4 py-2.5 rounded-full text-white text-sm font-medium shadow-lg"></div>
+  </div>
+
+  <script>
+  (function () {
+    "use strict";
+
+    // ---------- Sabitler & varsayılanlar ----------
+    var LS_CONFIG  = "sp_config_v1";
+    var LS_ROSTER  = "sp_roster_v1";
+    var LS_QUEUE   = "sp_queue_v1";
+
+    var DEFAULT_CATEGORIES = ["Sözlü", "Performans", "Ödev", "Derse Katılım", "Proje"];
+    var DEFAULT_REASONS = ["Derse aktif katıldı", "Soruları doğru yanıtladı", "Ödevini yaptı", "Ödevini yapmadı", "Gelişme gösterdi"];
+
+    var DEMO_ROSTER = [
+      { sinif: "5-A", no: "101", ad: "Ayşe Yılmaz" },
+      { sinif: "5-A", no: "102", ad: "Mehmet Demir" },
+      { sinif: "5-A", no: "103", ad: "Zeynep Kaya" },
+      { sinif: "6-B", no: "201", ad: "Ali Çelik" },
+      { sinif: "6-B", no: "202", ad: "Elif Şahin" }
+    ];
+
+    // ---------- Durum ----------
+    var config = loadConfig();
+    var roster = loadRoster();       // [{sinif,no,ad}]
+    var isDemo = false;
+    var selectedCategory = null;
+    var selectedStudent = null;      // {sinif,no,ad}
+
+    // ---------- Yardımcılar ----------
+    function $(id) { return document.getElementById(id); }
+
+    function loadConfig() {
+      try {
+        var c = JSON.parse(localStorage.getItem(LS_CONFIG) || "{}");
+        return {
+          teacher: c.teacher || "",
+          url: c.url || "",
+          categories: (c.categories && c.categories.length) ? c.categories : DEFAULT_CATEGORIES.slice(),
+          reasons: (c.reasons && c.reasons.length) ? c.reasons : DEFAULT_REASONS.slice()
+        };
+      } catch (e) {
+        return { teacher: "", url: "", categories: DEFAULT_CATEGORIES.slice(), reasons: DEFAULT_REASONS.slice() };
+      }
+    }
+    function saveConfig() {
+      try { localStorage.setItem(LS_CONFIG, JSON.stringify(config)); } catch (e) {}
+    }
+    function loadRoster() {
+      try { return JSON.parse(localStorage.getItem(LS_ROSTER) || "[]"); } catch (e) { return []; }
+    }
+    function saveRoster(r) {
+      try { localStorage.setItem(LS_ROSTER, JSON.stringify(r)); } catch (e) {}
+    }
+    function loadQueue() {
+      try { return JSON.parse(localStorage.getItem(LS_QUEUE) || "[]"); } catch (e) { return []; }
+    }
+    function saveQueue(q) {
+      try { localStorage.setItem(LS_QUEUE, JSON.stringify(q)); } catch (e) {}
+    }
+
+    function toast(msg, type) {
+      var t = $("toast"), inner = $("toastInner");
+      inner.textContent = msg;
+      inner.className = "px-4 py-2.5 rounded-full text-white text-sm font-medium shadow-lg " +
+        (type === "error" ? "bg-red-600" : type === "warn" ? "bg-amber-600" : "bg-emerald-600");
+      t.classList.remove("hidden");
+      clearTimeout(toast._t);
+      toast._t = setTimeout(function () { t.classList.add("hidden"); }, 2600);
+    }
+
+    function setNetDot(state) {
+      // state: 'ok' | 'off' | 'idle'
+      var d = $("netDot");
+      d.className = "w-2.5 h-2.5 rounded-full " +
+        (state === "ok" ? "bg-emerald-300" : state === "off" ? "bg-red-300" : "bg-slate-300");
+    }
+
+    function esc(s) {
+      return String(s == null ? "" : s).replace(/[&<>"']/g, function (m) {
+        return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m];
+      });
+    }
+
+    // ---------- Sunucu iletişimi (Apps Script) ----------
+    // POST'u basit istek (text/plain) yaparak CORS preflight'ı önlüyoruz.
+    function apiPost(payload) {
+      return fetch(config.url, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(payload),
+        redirect: "follow"
+      }).then(function (r) { return r.json(); });
+    }
+    function apiGet(params) {
+      var qs = Object.keys(params).map(function (k) {
+        return encodeURIComponent(k) + "=" + encodeURIComponent(params[k]);
+      }).join("&");
+      return fetch(config.url + "?" + qs, { method: "GET", redirect: "follow" })
+        .then(function (r) { return r.json(); });
+    }
+
+    // ---------- Roster ----------
+    function uniqueClasses() {
+      var seen = {}, out = [];
+      roster.forEach(function (s) {
+        if (s.sinif && !seen[s.sinif]) { seen[s.sinif] = true; out.push(s.sinif); }
+      });
+      out.sort(function (a, b) { return String(a).localeCompare(String(b), "tr"); });
+      return out;
+    }
+    function studentsOf(sinif) {
+      return roster.filter(function (s) { return s.sinif === sinif; });
+    }
+
+    function fetchRoster(silent) {
+      if (!config.url) { useDemo(); return Promise.resolve(); }
+      return apiGet({ action: "roster" }).then(function (res) {
+        if (res && res.ok && res.roster) {
+          roster = res.roster.map(function (x) {
+            return { sinif: String(x.sinif || "").trim(), no: String(x.no || "").trim(), ad: String(x.ad || "").trim() };
+          }).filter(function (x) { return x.sinif && x.ad; });
+          saveRoster(roster);
+          isDemo = false;
+          if (res.categories && res.categories.length) {
+            config.categories = res.categories; saveConfig();
+          }
+          $("setupHint").classList.add("hidden");
+          setNetDot("ok");
+          renderClasses();
+          if (!silent) toast("Liste güncellendi (" + roster.length + " öğrenci)");
+        } else {
+          throw new Error((res && res.error) || "Beklenmeyen yanıt");
+        }
+      }).catch(function (err) {
+        setNetDot("off");
+        if (roster.length) {
+          // önbellekteki listeyle devam et
+          if (!silent) toast("Sunucuya ulaşılamadı, kayıtlı liste kullanılıyor", "warn");
+          renderClasses();
+        } else {
+          useDemo();
+          if (!silent) toast("Bağlantı yok — demo listesi gösteriliyor", "warn");
+        }
+      });
+    }
+
+    function useDemo() {
+      isDemo = true;
+      roster = DEMO_ROSTER.slice();
+      $("setupHint").classList.remove("hidden");
+      setNetDot("idle");
+      renderClasses();
+    }
+
+    // ---------- Ekran çizimi ----------
+    function renderClasses() {
+      var sel = $("selClass");
+      var current = sel.value;
+      var classes = uniqueClasses();
+      sel.innerHTML = '<option value="">— Sınıf seçin —</option>' +
+        classes.map(function (c) { return '<option value="' + esc(c) + '">' + esc(c) + "</option>"; }).join("");
+      if (current && classes.indexOf(current) !== -1) sel.value = current;
+    }
+
+    function renderStudents() {
+      var sinif = $("selClass").value;
+      var box = $("secStudent");
+      if (!sinif) { box.classList.add("hidden"); return; }
+      box.classList.remove("hidden");
+      box.classList.add("fade-in");
+      var q = ($("studentSearch").value || "").toLocaleLowerCase("tr");
+      var list = studentsOf(sinif).filter(function (s) {
+        if (!q) return true;
+        return (s.ad.toLocaleLowerCase("tr").indexOf(q) !== -1) || (String(s.no).indexOf(q) !== -1);
+      });
+      $("studentCount").textContent = list.length + " öğrenci";
+      var html = list.map(function (s) {
+        var isSel = selectedStudent && selectedStudent.sinif === s.sinif && selectedStudent.no === s.no && selectedStudent.ad === s.ad;
+        return '<button data-no="' + esc(s.no) + '" data-ad="' + esc(s.ad) + '" ' +
+          'class="stu-btn w-full text-left px-3 py-2.5 rounded-xl border ' +
+          (isSel ? "border-blue-500 bg-blue-50" : "border-slate-200 hover:bg-slate-50") + '">' +
+          '<span class="inline-block w-12 text-xs text-slate-400 tabular-nums">' + esc(s.no) + "</span>" +
+          '<span class="font-medium">' + esc(s.ad) + "</span></button>";
+      }).join("");
+      $("studentList").innerHTML = html || '<p class="text-sm text-slate-400 py-4 text-center">Öğrenci bulunamadı.</p>';
+      Array.prototype.forEach.call(document.querySelectorAll(".stu-btn"), function (btn) {
+        btn.addEventListener("click", function () {
+          selectedStudent = { sinif: sinif, no: btn.getAttribute("data-no"), ad: btn.getAttribute("data-ad") };
+          openEntry();
+          renderStudents();
+        });
+      });
+    }
+
+    function renderCategories() {
+      $("categoryChips").innerHTML = config.categories.map(function (c) {
+        var on = c === selectedCategory;
+        return '<button data-cat="' + esc(c) + '" class="cat-btn px-3.5 py-2 rounded-full text-sm border ' +
+          (on ? "bg-blue-600 text-white border-blue-600" : "bg-white text-slate-600 border-slate-300 hover:border-blue-400") +
+          '">' + esc(c) + "</button>";
+      }).join("");
+      Array.prototype.forEach.call(document.querySelectorAll(".cat-btn"), function (btn) {
+        btn.addEventListener("click", function () {
+          selectedCategory = btn.getAttribute("data-cat");
+          renderCategories();
+        });
+      });
+    }
+
+    function renderReasonChips() {
+      $("reasonChips").innerHTML = config.reasons.map(function (r) {
+        return '<button data-reason="' + esc(r) + '" class="reason-btn px-3 py-1.5 rounded-full text-xs bg-slate-100 text-slate-600 hover:bg-slate-200">+ ' + esc(r) + "</button>";
+      }).join("");
+      Array.prototype.forEach.call(document.querySelectorAll(".reason-btn"), function (btn) {
+        btn.addEventListener("click", function () {
+          var ta = $("reason");
+          var val = btn.getAttribute("data-reason");
+          ta.value = ta.value ? (ta.value.replace(/\s*$/, "") + ", " + val) : val;
+          ta.focus();
+        });
+      });
+    }
+
+    function openEntry() {
+      $("selectedStudentName").textContent = selectedStudent.ad + "  (" + selectedStudent.sinif + " • No: " + selectedStudent.no + ")";
+      $("secEntry").classList.remove("hidden");
+      $("secEntry").classList.add("fade-in");
+      selectedCategory = null;
+      $("grade").value = "";
+      $("reason").value = "";
+      renderCategories();
+      renderReasonChips();
+      $("historyBox").classList.add("hidden");
+      $("historyList").innerHTML = "";
+      loadHistory();
+      $("secEntry").scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
+    function loadHistory() {
+      if (isDemo || !config.url || !selectedStudent) return;
+      apiGet({ action: "history", sinif: selectedStudent.sinif, no: selectedStudent.no, limit: 5 })
+        .then(function (res) {
+          if (res && res.ok && res.notlar && res.notlar.length) {
+            $("historyBox").classList.remove("hidden");
+            $("historyList").innerHTML = res.notlar.map(function (n) {
+              return '<div class="flex items-start justify-between gap-2 bg-slate-50 rounded-lg px-3 py-2">' +
+                '<div><span class="font-semibold text-blue-700">' + esc(n.kategori) + "</span> " +
+                '<span class="text-slate-400 text-xs">' + esc(n.tarih) + "</span>" +
+                (n.gerekce ? '<div class="text-xs text-slate-500">' + esc(n.gerekce) + "</div>" : "") +
+                "</div>" +
+                '<span class="font-bold text-slate-700 tabular-nums">' + esc(n.not) + "</span></div>";
+            }).join("");
+          }
+        }).catch(function () {});
+    }
+
+    // ---------- Kaydetme ----------
+    function currentPayload() {
+      return {
+        sinif: selectedStudent.sinif,
+        ogrenciNo: selectedStudent.no,
+        ogrenci: selectedStudent.ad,
+        kategori: selectedCategory,
+        not: $("grade").value.trim(),
+        gerekce: $("reason").value.trim(),
+        ogretmen: config.teacher || ""
+      };
+    }
+
+    function validate(p) {
+      if (!selectedStudent) return "Önce öğrenci seçin.";
+      if (!p.kategori) return "Bir kategori seçin.";
+      if (p.not === "") return "Not (puan) girin.";
+      var n = Number(p.not);
+      if (!isNaN(n) && (n < 0 || n > 100)) return "Not 0 ile 100 arasında olmalı.";
+      return null;
+    }
+
+    function save() {
+      var p = currentPayload();
+      var err = validate(p);
+      if (err) { toast(err, "warn"); return; }
+
+      if (isDemo || !config.url) {
+        toast("Demo modunda kayıt yapılmaz. Ayarlardan bağlantı girin.", "warn");
+        return;
+      }
+
+      var btn = $("btnSave");
+      btn.disabled = true; btn.textContent = "Kaydediliyor…";
+
+      apiPost(p).then(function (res) {
+        if (res && res.ok) {
+          setNetDot("ok");
+          toast("✓ " + p.ogrenci + " → " + p.kategori + ": " + p.not);
+          $("grade").value = ""; $("reason").value = ""; selectedCategory = null;
+          renderCategories();
+          loadHistory();
+          flushQueue();
+        } else {
+          throw new Error((res && res.error) || "Sunucu hatası");
+        }
+      }).catch(function () {
+        // Ağ hatası: kuyruğa al
+        var q = loadQueue(); q.push({ payload: p, ts: Date.now() }); saveQueue(q);
+        setNetDot("off");
+        toast("Bağlantı yok — kayıt kuyruğa alındı, sonra gönderilecek", "warn");
+        updateQueueFooter();
+        $("grade").value = ""; $("reason").value = ""; selectedCategory = null;
+        renderCategories();
+      }).then(function () {
+        btn.disabled = false; btn.textContent = "💾 Kaydet";
+      });
+    }
+
+    function flushQueue() {
+      var q = loadQueue();
+      if (!q.length || !config.url || isDemo) { updateQueueFooter(); return; }
+      var next = q[0];
+      apiPost(next.payload).then(function (res) {
+        if (res && res.ok) {
+          q.shift(); saveQueue(q); updateQueueFooter();
+          if (q.length) flushQueue();
+        }
+      }).catch(function () { /* bir sonraki fırsatta */ });
+    }
+
+    function updateQueueFooter() {
+      var q = loadQueue();
+      $("queueFooter").textContent = q.length ? ("⏳ " + q.length + " kayıt gönderilmeyi bekliyor") : "";
+    }
+
+    // ---------- Ayarlar modalı ----------
+    function openSettings() {
+      $("cfgTeacher").value = config.teacher;
+      $("cfgUrl").value = config.url;
+      $("cfgCategories").value = config.categories.join(", ");
+      $("cfgReasons").value = config.reasons.join(", ");
+      $("testResult").textContent = "";
+      var m = $("settingsModal");
+      m.classList.remove("hidden"); m.classList.add("flex");
+    }
+    function closeSettings() {
+      var m = $("settingsModal");
+      m.classList.add("hidden"); m.classList.remove("flex");
+    }
+    function parseList(str) {
+      return str.split(",").map(function (s) { return s.trim(); }).filter(Boolean);
+    }
+    function saveSettings() {
+      config.teacher = $("cfgTeacher").value.trim();
+      config.url = $("cfgUrl").value.trim();
+      var cats = parseList($("cfgCategories").value);
+      var reas = parseList($("cfgReasons").value);
+      config.categories = cats.length ? cats : DEFAULT_CATEGORIES.slice();
+      config.reasons = reas.length ? reas : DEFAULT_REASONS.slice();
+      saveConfig();
+      $("teacherLabel").textContent = config.teacher ? config.teacher : "Not Girişi";
+      renderCategories();
+      renderReasonChips();
+      closeSettings();
+      toast("Ayarlar kaydedildi");
+      fetchRoster(true);
+      flushQueue();
+    }
+
+    function testConnection() {
+      var url = $("cfgUrl").value.trim();
+      if (!url) { $("testResult").innerHTML = '<span class="text-amber-600">Önce bir adres girin.</span>'; return; }
+      $("testResult").innerHTML = '<span class="text-slate-500">Test ediliyor…</span>';
+      fetch(url + "?action=ping", { method: "GET", redirect: "follow" })
+        .then(function (r) { return r.json(); })
+        .then(function (res) {
+          if (res && res.ok) {
+            $("testResult").innerHTML = '<span class="text-emerald-600">✓ Bağlantı başarılı' +
+              (res.count != null ? " — " + res.count + " öğrenci bulundu" : "") + "</span>";
+            setNetDot("ok");
+          } else {
+            $("testResult").innerHTML = '<span class="text-red-600">Yanıt geldi ama hata: ' + esc((res && res.error) || "?") + "</span>";
+          }
+        })
+        .catch(function () {
+          $("testResult").innerHTML = '<span class="text-red-600">✗ Ulaşılamadı. Adresi ve dağıtım (deploy) ayarlarını kontrol edin.</span>';
+        });
+    }
+
+    // ---------- e-Okul içe aktarma ----------
+    var LS_MYCLASSES = "sp_myclasses_v1";
+    var parsedClasses = []; // [{code, students:[{no,ad}]}]
+
+    function loadMyClasses() {
+      try { return JSON.parse(localStorage.getItem(LS_MYCLASSES) || "[]"); } catch (e) { return []; }
+    }
+    function saveMyClasses(list) {
+      try { localStorage.setItem(LS_MYCLASSES, JSON.stringify(list)); } catch (e) {}
+    }
+
+    // e-Okul "Sınıf Listesi" (.xls) ayrıştırıcı — tek sayfada üst üste birden çok sınıf.
+    function parseEokul(rows) {
+      var titleRe = /(\d+)\.\s*S\S*n\S*f\s*\/\s*([0-9A-Za-zÇĞİıÖŞÜçğöşü]+)\s*[ŞS]ubesi/;
+      var result = [];
+      var cur = null, colNo = null, colAd = null, colSoy = null;
+
+      function norm(v) { return (v == null ? "" : String(v)).trim(); }
+
+      for (var i = 0; i < rows.length; i++) {
+        var row = rows[i] || [];
+        var first = norm(row[0]);
+        var m = titleRe.exec(norm(row[0]));
+        if (m) {
+          var code = m[1] + m[2].toLocaleUpperCase("tr");
+          cur = { code: code, students: [] };
+          result.push(cur);
+          colNo = colAd = colSoy = null;
+          continue;
+        }
+        if (first === "S.No") {
+          for (var c = 0; c < row.length; c++) {
+            var h = norm(row[c]);
+            if (h === "Öğrenci No") colNo = c;
+            else if (h === "Adı") colAd = c;
+            else if (h === "Soyadı") colSoy = c;
+          }
+          continue;
+        }
+        if (cur && colAd != null) {
+          if (norm(row[0]) === "" || isNaN(parseFloat(row[0]))) continue; // öğrenci satırı S.No ile başlar
+          var ad = norm(row[colAd]);
+          var soy = colSoy != null ? norm(row[colSoy]) : "";
+          if (!ad) continue;
+          var no = colNo != null ? norm(row[colNo]) : "";
+          if (no && no.indexOf(".") !== -1 && !isNaN(no)) no = String(parseInt(no, 10)); // 37.0 -> 37
+          cur.students.push({ no: no, ad: soy ? (ad + " " + soy) : ad });
+        }
+      }
+      // öğrencisi olmayan başlıkları at
+      return result.filter(function (x) { return x.students.length > 0; });
+    }
+
+    function handleFile(file) {
+      $("importResult").textContent = "";
+      var reader = new FileReader();
+      reader.onload = function (e) {
+        try {
+          var wb = XLSX.read(new Uint8Array(e.target.result), { type: "array" });
+          var ws = wb.Sheets[wb.SheetNames[0]];
+          var rows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: "" });
+          parsedClasses = parseEokul(rows);
+          if (!parsedClasses.length) {
+            $("importArea").classList.add("hidden");
+            $("importResult").innerHTML = '<span class="text-red-600">Dosyada sınıf listesi bulunamadı. e-Okul "Sınıf Listesi" (.xls) dosyası olduğundan emin olun.</span>';
+            return;
+          }
+          renderChecklist();
+          $("importArea").classList.remove("hidden");
+        } catch (err) {
+          $("importResult").innerHTML = '<span class="text-red-600">Dosya okunamadı: ' + esc(String(err)) + "</span>";
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    function renderChecklist() {
+      var mine = loadMyClasses();
+      var total = parsedClasses.reduce(function (s, c) { return s + c.students.length; }, 0);
+      $("importFound").textContent = parsedClasses.length + " sınıf, " + total + " öğrenci bulundu";
+      $("classChecklist").innerHTML = parsedClasses.map(function (c) {
+        var checked = mine.indexOf(c.code) !== -1 ? "checked" : "";
+        return '<label class="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-50 cursor-pointer">' +
+          '<input type="checkbox" class="cls-cb rounded" value="' + esc(c.code) + '" ' + checked + ' />' +
+          '<span class="font-medium text-slate-700">' + esc(c.code) + "</span>" +
+          '<span class="text-xs text-slate-400 ml-auto">' + c.students.length + " öğrenci</span></label>";
+      }).join("");
+    }
+
+    function selectedClassCodes() {
+      return Array.prototype.map.call(document.querySelectorAll(".cls-cb:checked"), function (cb) { return cb.value; });
+    }
+
+    function apiSetRoster(rosterRows, mode) {
+      return apiPost({ action: "setRoster", mode: mode, roster: rosterRows });
+    }
+
+    function doImport() {
+      var codes = selectedClassCodes();
+      if (!codes.length) { $("importResult").innerHTML = '<span class="text-amber-600">En az bir sınıf seçin.</span>'; return; }
+      saveMyClasses(codes);
+
+      var rows = [];
+      parsedClasses.forEach(function (c) {
+        if (codes.indexOf(c.code) === -1) return;
+        c.students.forEach(function (s) { rows.push({ sinif: c.code, no: s.no, ad: s.ad }); });
+      });
+
+      var mode = $("importReplace").checked ? "replace" : "merge";
+      var btn = $("btnImport");
+
+      if (!config.url) {
+        // Bağlantı yoksa: yerel listeye yaz (bu tarayıcıda çalışır)
+        if (mode === "replace") { roster = rows.slice(); }
+        else {
+          var key = {}; roster.forEach(function (r) { key[r.sinif + "|" + r.no] = r; });
+          rows.forEach(function (r) { key[r.sinif + "|" + r.no] = r; });
+          roster = Object.keys(key).map(function (k) { return key[k]; });
+        }
+        saveRoster(roster); isDemo = false; $("setupHint").classList.add("hidden"); renderClasses();
+        $("importResult").innerHTML = '<span class="text-emerald-600">✓ ' + rows.length + " öğrenci bu cihaza aktarıldı. (Google Sheet bağlantısı eklenmedi.)</span>";
+        return;
+      }
+
+      btn.disabled = true; btn.textContent = "Aktarılıyor…";
+      apiSetRoster(rows, mode).then(function (res) {
+        if (res && res.ok) {
+          $("importResult").innerHTML = '<span class="text-emerald-600">✓ ' + (res.yazilan != null ? res.yazilan : rows.length) + " öğrenci Google Sheet'e aktarıldı.</span>";
+          fetchRoster(true);
+        } else {
+          throw new Error((res && res.error) || "Sunucu hatası");
+        }
+      }).catch(function (err) {
+        $("importResult").innerHTML = '<span class="text-red-600">Aktarılamadı: ' + esc(String(err)) + ". Bağlantıyı ve dağıtım sürümünü kontrol edin.</span>";
+      }).then(function () {
+        btn.disabled = false; btn.textContent = "Seçili sınıfları aktar";
+      });
+    }
+
+    // ---------- Olaylar ----------
+    $("selClass").addEventListener("change", function () {
+      selectedStudent = null;
+      $("secEntry").classList.add("hidden");
+      $("studentSearch").value = "";
+      renderStudents();
+    });
+    $("studentSearch").addEventListener("input", renderStudents);
+    $("btnChangeStudent").addEventListener("click", function () {
+      $("secStudent").scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+    $("btnSave").addEventListener("click", save);
+
+    $("btnSettings").addEventListener("click", openSettings);
+    $("btnCloseSettings").addEventListener("click", closeSettings);
+    $("settingsModal").addEventListener("click", function (e) { if (e.target === this) closeSettings(); });
+    $("btnSaveSettings").addEventListener("click", saveSettings);
+    $("btnTest").addEventListener("click", testConnection);
+    $("btnRefreshRoster").addEventListener("click", function () {
+      config.url = $("cfgUrl").value.trim(); saveConfig();
+      fetchRoster(false);
+    });
+
+    $("eokulFile").addEventListener("change", function (e) {
+      if (e.target.files && e.target.files[0]) handleFile(e.target.files[0]);
+    });
+    $("btnToggleAll").addEventListener("click", function () {
+      var cbs = document.querySelectorAll(".cls-cb");
+      var allOn = Array.prototype.every.call(cbs, function (cb) { return cb.checked; });
+      Array.prototype.forEach.call(cbs, function (cb) { cb.checked = !allOn; });
+    });
+    $("btnImport").addEventListener("click", doImport);
+
+    window.addEventListener("online", function () { setNetDot("ok"); flushQueue(); });
+    window.addEventListener("offline", function () { setNetDot("off"); });
+
+    // ---------- Başlangıç ----------
+    $("teacherLabel").textContent = config.teacher ? config.teacher : "Not Girişi";
+    if (roster.length) { isDemo = false; renderClasses(); }
+    renderCategories();
+    renderReasonChips();
+    updateQueueFooter();
+    fetchRoster(true);
+    flushQueue();
+  })();
+  </script>
+</body>
+</html>
