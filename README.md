@@ -10,7 +10,8 @@ Her kayıt, tarih ve gerekçesiyle Google Sheet'e düşer.
 - **`KURULUM.md`** — Adım adım kurulum kılavuzu.
 
 ## Öne çıkan özellikler
-- Notlar doğrudan Google Sheet'e kaydedilir (Apps Script ile).
+- Her sınıf **kendi sekmesinde**; notlar öğrencinin karşısındaki **kategori sütununa** (Sözlü-1, Sözlü-2…) yazılır. Her sınıf sayfasını ayrı yayımlayabilirsiniz.
+- Gerekçe hem **hücre notu** olarak eklenir hem de ayrı `Gerekçeler` sekmesine loglanır.
 - Seçilen öğrencinin son notları uygulamada görünür.
 - **e-Okul "Sınıf Listesi" (.xls)** dosyasından, **yalnızca kendi sınıflarınızı** seçip öğrenci listesini içe aktarma ve güncel tutma.
 - İnternet kesilirse kayıtlar kuyruğa alınır, bağlantı gelince otomatik gönderilir.

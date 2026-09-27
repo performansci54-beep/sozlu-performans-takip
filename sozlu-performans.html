@@ -140,7 +140,7 @@
         <!-- e-Okul içe aktarma -->
         <div class="border-t border-slate-100 pt-4 mt-2">
           <label class="block text-sm font-semibold text-slate-600 mb-1">📥 Öğrenci listesini e-Okul'dan aktar</label>
-          <p class="text-[11px] text-slate-400 mb-2">e-Okul → Sınıf Listesi çıktısını (.xls) yükleyin, sadece kendi sınıflarınızı seçin. Liste her güncellendiğinde yeni dosyayı yükleyip aynı sınıfları tekrar aktarın.</p>
+          <p class="text-[11px] text-slate-400 mb-2">e-Okul → Sınıf Listesi çıktısını (.xls) yükleyin, sadece kendi sınıflarınızı seçin. Her sınıf, Google Sheet'te kendi sekmesi olarak oluşturulur; öğrenciler eklenir/güncellenir, mevcut notlar korunur. Liste değişince yeni dosyayı yükleyip aynı sınıfları tekrar aktarın.</p>
           <input id="eokulFile" type="file" accept=".xls,.xlsx"
                  class="w-full text-sm text-slate-600 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-blue-50 file:text-blue-700 file:font-medium mb-2" />
           <div id="importArea" class="hidden">
@@ -149,10 +149,6 @@
               <button id="btnToggleAll" type="button" class="text-xs text-blue-600 underline">Tümünü seç/kaldır</button>
             </div>
             <div id="classChecklist" class="max-h-48 overflow-y-auto no-scrollbar border border-slate-200 rounded-xl p-2 space-y-1 mb-2"></div>
-            <label class="flex items-center gap-2 text-xs text-slate-600 mb-2">
-              <input type="checkbox" id="importReplace" checked class="rounded" />
-              Mevcut listenin yerine yaz (kaldırılan öğrenciler silinir)
-            </label>
             <button id="btnImport" type="button" class="w-full bg-emerald-600 text-white font-semibold py-2.5 rounded-xl hover:bg-emerald-700 disabled:opacity-50">Seçili sınıfları aktar</button>
             <p id="importResult" class="text-sm mt-2"></p>
           </div>
@@ -644,8 +640,8 @@
       return Array.prototype.map.call(document.querySelectorAll(".cls-cb:checked"), function (cb) { return cb.value; });
     }
 
-    function apiSetRoster(rosterRows, mode) {
-      return apiPost({ action: "setRoster", mode: mode, roster: rosterRows });
+    function apiSetRoster(rosterRows) {
+      return apiPost({ action: "setRoster", roster: rosterRows });
     }
 
     function doImport() {
@@ -659,26 +655,22 @@
         c.students.forEach(function (s) { rows.push({ sinif: c.code, no: s.no, ad: s.ad }); });
       });
 
-      var mode = $("importReplace").checked ? "replace" : "merge";
       var btn = $("btnImport");
 
       if (!config.url) {
-        // Bağlantı yoksa: yerel listeye yaz (bu tarayıcıda çalışır)
-        if (mode === "replace") { roster = rows.slice(); }
-        else {
-          var key = {}; roster.forEach(function (r) { key[r.sinif + "|" + r.no] = r; });
-          rows.forEach(function (r) { key[r.sinif + "|" + r.no] = r; });
-          roster = Object.keys(key).map(function (k) { return key[k]; });
-        }
+        // Bağlantı yoksa: yerel listeye ekle/güncelle (bu tarayıcıda çalışır)
+        var key = {}; roster.forEach(function (r) { key[r.sinif + "|" + r.no] = r; });
+        rows.forEach(function (r) { key[r.sinif + "|" + r.no] = r; });
+        roster = Object.keys(key).map(function (k) { return key[k]; });
         saveRoster(roster); isDemo = false; $("setupHint").classList.add("hidden"); renderClasses();
         $("importResult").innerHTML = '<span class="text-emerald-600">✓ ' + rows.length + " öğrenci bu cihaza aktarıldı. (Google Sheet bağlantısı eklenmedi.)</span>";
         return;
       }
 
       btn.disabled = true; btn.textContent = "Aktarılıyor…";
-      apiSetRoster(rows, mode).then(function (res) {
+      apiSetRoster(rows).then(function (res) {
         if (res && res.ok) {
-          $("importResult").innerHTML = '<span class="text-emerald-600">✓ ' + (res.yazilan != null ? res.yazilan : rows.length) + " öğrenci Google Sheet'e aktarıldı.</span>";
+          $("importResult").innerHTML = '<span class="text-emerald-600">✓ ' + (res.yazilan != null ? res.yazilan : rows.length) + " öğrenci" + (res.sinif != null ? ", " + res.sinif + " sınıf sekmesine" : "") + " aktarıldı.</span>";
           fetchRoster(true);
         } else {
           throw new Error((res && res.error) || "Sunucu hatası");

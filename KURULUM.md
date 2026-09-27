@@ -5,7 +5,9 @@ Bu araç iki parçadan oluşur:
 1. **`sozlu-performans.html`** — Not girdiğiniz uygulama (telefon/tablet/bilgisayarda çalışır).
 2. **Google Sheet + Apps Script** — Notların kaydedildiği tablo ve bağlantı köprüsü (`apps-script/Kod.gs`).
 
-Akış: **Sınıf seç → öğrenci listesi açılır → öğrenci seç → kategori seç → not + gerekçe gir → Kaydet** → ilgili öğrencinin kaydı Google Sheet'teki **Notlar** sekmesine, tarih ve gerekçesiyle eklenir.
+Akış: **Sınıf seç → öğrenci listesi açılır → öğrenci seç → kategori seç → not + gerekçe gir → Kaydet.**
+
+Her sınıf, Google Sheet'te **kendi sekmesinde** tutulur (sekme adı = sınıf kodu: `9A`, `10C`…). Öğrenciler bu sekmede hazır listelidir; girdiğiniz not, ilgili öğrencinin satırında **kategoriye ait sütuna** (`Sözlü-1`, `Sözlü-2`, `Performans-1`…) yazılır. Gerekçe hem **hücre notu** olarak eklenir hem de ayrı bir **`Gerekçeler`** sekmesine loglanır. Böylece her sınıf sayfasını ayrı yayımlayabilirsiniz.
 
 ---
 
@@ -21,25 +23,24 @@ Akış: **Sınıf seç → öğrenci listesi açılır → öğrenci seç → ka
 3. Bu depodaki **`apps-script/Kod.gs`** dosyasının içeriğini kopyalayıp yapıştırın.
 4. Kaydet (💾 / Ctrl+S).
 
-### Adım 3: Sekmeleri oluşturun
+### Adım 3: İzinleri verin (kurulum)
 1. Apps Script editöründe, üstteki fonksiyon listesinden **`kurEt`** seçin ve **Çalıştır (Run)**'a basın.
 2. İlk çalıştırmada Google izin isteyecek: **İzinleri gözden geçir → hesabınızı seçin → Gelişmiş → (proje adına) git → İzin ver**.
-3. Bu, tablonuza otomatik olarak **Ogrenciler** ve **Notlar** sekmelerini ekler.
+3. Bu, tablonuza **`Gerekçeler`** log sekmesini ekler. **Sınıf sekmeleri** (9A, 10C…) daha sonra uygulamadan içe aktarma yapınca otomatik oluşur.
 
 ### Adım 4: Öğrenci listesini doldurun
 İki yol var:
 
-**A) e-Okul'dan otomatik aktarma (önerilir).** Aşağıdaki "Öğrenci listesini e-Okul'dan aktarma" bölümüne bakın. Manuel yazmanıza gerek kalmaz.
+**A) e-Okul'dan otomatik aktarma (önerilir).** Aşağıdaki "Öğrenci listesini e-Okul'dan aktarma" bölümüne bakın. Sınıf sekmeleri ve öğrenci listeleri otomatik oluşur.
 
-**B) Elle girme.** **Ogrenciler** sekmesine öğrencilerinizi girin (örnek satırları silebilirsiniz):
+**B) Elle girme.** Her sınıf için bir sekme açın (sekme adı = sınıf kodu, ör. `9A`). İlk satıra başlıkları, altına öğrencileri yazın:
 
-| Sınıf | No  | Ad Soyad       |
-|-------|-----|----------------|
-| 9A    | 37  | Beren Nil Özalıç |
-| 9A    | 46  | Gülcan Arslan  |
-| 10C   | 12  | Ali Çelik      |
+| No  | Ad Soyad         |
+|-----|------------------|
+| 37  | Beren Nil Özalıç |
+| 46  | Gülcan Arslan    |
 
-> Not: **Sınıf** ve **Ad Soyad** zorunlu, **No** isteğe bağlıdır. Sınıf adlarını istediğiniz gibi yazabilirsiniz.
+> Önemli: Sınıf sekmesinin **A1 hücresi tam olarak `No`**, **B1 hücresi tam olarak `Ad Soyad`** olmalı (uygulama sınıf sekmelerini bu başlıktan tanır). Not sütunlarını (C, D…) siz açmayın; not girdikçe otomatik oluşur.
 
 ### Adım 5: Web App olarak yayınlayın (Deploy)
 1. Apps Script editöründe sağ üstte **Dağıt (Deploy) → Yeni dağıtım (New deployment)**.
@@ -63,7 +64,7 @@ Akış: **Sınıf seç → öğrenci listesi açılır → öğrenci seç → ka
 5. **🔌 Bağlantıyı test et** → "✓ Bağlantı başarılı" görmelisiniz.
 6. **Kaydet**. Sınıf listesi otomatik gelir.
 
-Artık: sınıf seçin → öğrenci seçin → kategori seçin → not ve gerekçe girin → **Kaydet**. Kayıt anında **Notlar** sekmesine düşer ve seçili öğrencinin son notları uygulamada görünür.
+Artık: sınıf seçin → öğrenci seçin → kategori seçin → not ve gerekçe girin → **Kaydet**. Kayıt anında ilgili **sınıf sekmesinde** öğrencinin karşısındaki kategori sütununa yazılır (gerekçe hücre notu olarak eklenir) ve seçili öğrencinin son notları uygulamada görünür.
 
 ---
 
@@ -72,8 +73,8 @@ Artık: sınıf seçin → öğrenci seçin → kategori seçin → not ve gerek
 Üç seçenek:
 
 - **En basit:** `sozlu-performans.html` dosyasını bilgisayarınıza indirip çift tıklayın. Ayarlar tarayıcıda saklanır.
-- **GitHub Pages (bu depo):** Bu dosya depoda olduğundan, GitHub Pages açıksa şu adresten erişilir:
-  `https://<kullanıcı-adınız>.github.io/performansv4.2/sozlu-performans.html`
+- **GitHub Pages (bu depo):** Repo **Settings → Pages → Branch: `main` → Save**. Birkaç dakika sonra:
+  `https://<kullanıcı-adınız>.github.io/sozlu-performans-takip/sozlu-performans.html`
 - **Telefonda kısayol:** Yukarıdaki adresi telefon tarayıcısında açıp "Ana ekrana ekle" derseniz uygulama gibi çalışır.
 
 ---
@@ -86,23 +87,34 @@ Artık: sınıf seçin → öğrenci seçin → kategori seçin → not ve gerek
 2. Uygulamada **⚙️ Ayarlar → "📥 Öğrenci listesini e-Okul'dan aktar"** bölümünde dosyayı seçin.
 3. Uygulama dosyadaki tüm sınıfları (ör. 9A, 9C, 10E…) öğrenci sayılarıyla listeler.
 4. **Sadece size ait sınıfları işaretleyin.** Seçiminiz hatırlanır; bir dahaki güncellemede otomatik işaretli gelir.
-5. **"Seçili sınıfları aktar"** deyin. Öğrenciler Google Sheet'teki **Ogrenciler** sekmesine yazılır.
+5. **"Seçili sınıfları aktar"** deyin. Her sınıf, Google Sheet'te **kendi sekmesi** olarak oluşturulur ve öğrenciler yazılır.
 
-**Güncelleme:** Liste değişince (yeni kayıt, nakil vb.) e-Okul'dan yeni `.xls`'i indirip aynı adımları tekrarlayın. "Mevcut listenin yerine yaz" işaretliyken eski liste tamamen yenisiyle değişir (ayrılan öğrenciler silinir). İşareti kaldırırsanız yeni öğrenciler eklenir, mevcutlar korunur (birleştirme).
+**Güncelleme:** Liste değişince (yeni kayıt, nakil vb.) e-Okul'dan yeni `.xls`'i indirip aynı adımları tekrarlayın. Öğrenciler **eklenir/güncellenir**, **mevcut notlar korunur** (hiçbir not silinmez). Ayrılan bir öğrenciyi listeden çıkarmak isterseniz, ilgili sınıf sekmesinden o satırı elle silebilirsiniz.
 
 > Desteklenen format: e-Okul "Sınıf Listesi" (.xls) — başlığında "… X. Sınıf / Y Şubesi … Sınıf Listesi" geçen, S.No / Öğrenci No / Adı / Soyadı sütunlu çıktı. Sınıf kodu otomatik "9A", "10C" gibi üretilir.
 
 ---
 
-## Öğrenci bazında görünüm ("her öğrencinin hanesi")
+## Sınıf sekmeleri ve not düzeni
 
-**Notlar** sekmesi tüm kayıtların kaydıdır (her satır bir not). Öğrenci bazında özet için yeni bir sekme açıp (**Ozet** gibi) A1 hücresine şu formülü yazabilirsiniz:
+Her sınıfın kendi sekmesi vardır. Örnek `9A` sekmesi:
 
-```
-=QUERY(Notlar!A:H; "select C, D, B, E, F, G, A where D is not null order by D, A desc label C 'No', D 'Ad Soyad', B 'Sınıf', E 'Kategori', F 'Not', G 'Gerekçe', A 'Tarih'"; 1)
-```
+| No | Ad Soyad         | Sözlü-1 | Sözlü-2 | Performans-1 | Ödev-1 |
+|----|------------------|---------|---------|--------------|--------|
+| 37 | Beren Nil Özalıç |   85    |   90    |      80      |  100   |
+| 46 | Gülcan Arslan    |   70    |         |      95      |        |
 
-Bu, tüm notları öğrenciye göre gruplu, gerekçeleriyle birlikte listeler. Tek bir öğrenciyi görmek için Sheet'in **filtre** özelliğini (Veri → Filtre oluştur) kullanabilirsiniz.
+- Bir öğrenciye aynı kategoriden ikinci not girince, o kategorinin **yanına** yeni sütun açılır (`Sözlü-2`), böylece kategoriler gruplu kalır.
+- Her not hücresinin üstüne gelince **gerekçe + tarih** görünür (hücre notu).
+- Tüm girişler ayrıca **`Gerekçeler`** sekmesine tarih/kategori/gerekçeyle loglanır — bu sekmeyi yayımlamayın.
+
+### Bir sınıfın sayfasını ayrı yayımlama
+Her sınıfı ayrı yayımlayabilirsiniz:
+1. **Dosya → Paylaş → Web'de yayımla (Publish to web)**.
+2. Açılan pencerede **"Tüm belge"** yerine ilgili **sekmeyi (ör. 9A)** seçin.
+3. **Yayımla** → o sınıfa özel bir bağlantı alırsınız. Her sınıf için tekrarlayın.
+
+> Alternatif: Sekmeye sağ tıklayıp diğer sekmeleri "Gizle" diyerek yalnızca ilgili sınıfı paylaşabilir; ya da her sınıf için ayrı bir Sheet dosyası tutabilirsiniz. Web'de yayımlama en pratik yoldur.
 
 ---
 
@@ -112,7 +124,7 @@ Bu, tüm notları öğrenciye göre gruplu, gerekçeleriyle birlikte listeler. T
 |-------|-------|
 | "Bağlantı yok — demo listesi" | Ayarlara Web App URL girilmemiş ya da yanlış. Adresin `/exec` ile bittiğinden emin olun. |
 | Test "✗ Ulaşılamadı" | Dağıtımda **Erişim: Herkes** seçili mi? Kodu değiştirdiyseniz **yeni sürüm** dağıttınız mı? |
-| Sınıf listesi boş | **Ogrenciler** sekmesini doldurdunuz mu? Ayarlarda **🔄 Listeyi yenile**'ye basın. |
+| Sınıf listesi boş | Sınıflarınızı e-Okul'dan aktardınız mı? (Ayarlar → içe aktarma) Sonra **🔄 Listeyi yenile**'ye basın. Sınıf sekmelerinin A1=`No`, B1=`Ad Soyad` olduğundan emin olun. |
 | Kayıt "kuyruğa alındı" | İnternet kesikti; bağlantı gelince otomatik gönderilir. Uygulamayı açık tutun. |
 | Kategorileri değiştirmek | Ayarlar → "Kategoriler" kutusundan, ya da Sheet'e **Kategoriler** sekmesi ekleyip A sütununa yazarak. |
 
