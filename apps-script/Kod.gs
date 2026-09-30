@@ -250,7 +250,7 @@ function _sekmeBicimle(sheet) {
   try {
     sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), 2)).setFontWeight("bold");
     sheet.setFrozenRows(1);
-    sheet.setFrozenColumns(2);
+    sheet.setFrozenColumns(0); // sütun dondurma YOK — "Web'de yayımla"da sağ tarafı gizleyebiliyor
   } catch (e) {}
 }
 
