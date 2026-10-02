@@ -50,11 +50,50 @@
       <section id="secStudent" class="bg-white rounded-2xl shadow-sm p-4 hidden">
         <div class="flex items-center justify-between mb-2">
           <label class="block text-sm font-semibold text-slate-600">2️⃣ Öğrenci seç</label>
-          <span id="studentCount" class="text-xs text-slate-400"></span>
+          <button id="btnBulkMode" class="text-xs font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-full px-3 py-1.5">📋 Toplu giriş</button>
         </div>
         <input id="studentSearch" type="search" inputmode="search" placeholder="Ara: ad veya numara…"
                class="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-base mb-2 focus:ring-2 focus:ring-blue-500 focus:outline-none" />
-        <div id="studentList" class="max-h-64 overflow-y-auto no-scrollbar space-y-1 pr-1"></div>
+        <span id="studentCount" class="text-xs text-slate-400"></span>
+        <div id="studentList" class="max-h-64 overflow-y-auto no-scrollbar space-y-1 pr-1 mt-1"></div>
+      </section>
+
+      <!-- Toplu giriş -->
+      <section id="secBulk" class="bg-white rounded-2xl shadow-sm p-4 hidden">
+        <div class="flex items-center justify-between mb-3">
+          <div>
+            <p class="text-xs text-indigo-500">Toplu giriş</p>
+            <p id="bulkClassName" class="font-semibold text-indigo-800"></p>
+          </div>
+          <button id="btnBulkExit" class="text-xs text-slate-500 underline">← tekli girişe dön</button>
+        </div>
+
+        <label class="block text-sm font-semibold text-slate-600 mb-2">1️⃣ Kategori</label>
+        <div id="bulkCategoryChips" class="flex flex-wrap gap-2 mb-4"></div>
+
+        <label class="block text-sm font-semibold text-slate-600 mb-1">2️⃣ Not (puan) — herkese aynı yazılacak</label>
+        <input id="bulkGrade" type="number" min="0" max="100" inputmode="numeric" placeholder="0 – 100"
+               class="w-full border border-slate-300 rounded-xl px-3 py-3 text-lg font-semibold text-center focus:ring-2 focus:ring-indigo-500 focus:outline-none mb-4" />
+
+        <label class="block text-sm font-semibold text-slate-600 mb-1">Gerekçe / Açıklama (ortak)</label>
+        <textarea id="bulkReason" rows="2" placeholder="Örn: Ödevini eksiksiz yaptı…"
+                  class="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-base focus:ring-2 focus:ring-indigo-500 focus:outline-none"></textarea>
+        <div id="bulkReasonChips" class="flex flex-wrap gap-2 mt-2 mb-4"></div>
+
+        <div class="flex items-center justify-between mb-2">
+          <label class="block text-sm font-semibold text-slate-600">3️⃣ Öğrencileri seç</label>
+          <label class="flex items-center gap-1.5 text-xs text-slate-600">
+            <input type="checkbox" id="bulkSelectAll" class="rounded" /> Tümünü seç
+          </label>
+        </div>
+        <input id="bulkSearch" type="search" inputmode="search" placeholder="Ara: ad veya numara…"
+               class="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-base mb-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+        <div id="bulkStudentList" class="max-h-64 overflow-y-auto no-scrollbar space-y-1 pr-1 mb-3"></div>
+
+        <button id="btnBulkSave" class="w-full bg-indigo-600 text-white font-semibold py-3.5 rounded-xl shadow-sm hover:bg-indigo-700 active:bg-indigo-800 disabled:opacity-50">
+          💾 Seçili öğrencilere kaydet
+        </button>
+        <p id="bulkResult" class="text-sm mt-2"></p>
       </section>
 
       <!-- Adım 3: Not girişi -->
@@ -682,18 +721,156 @@
       });
     }
 
+    // ---------- Toplu giriş ----------
+    var bulkActive = false;
+    var bulkCategory = null;
+    var bulkSelected = {}; // key: no|ad -> {no,ad}
+
+    function bulkKey(s) { return s.no + "|" + s.ad; }
+
+    function enterBulk() {
+      var sinif = $("selClass").value;
+      if (!sinif) { toast("Önce sınıf seçin.", "warn"); return; }
+      bulkActive = true;
+      bulkSelected = {};
+      bulkCategory = null;
+      $("bulkClassName").textContent = sinif;
+      $("bulkGrade").value = "";
+      $("bulkReason").value = "";
+      $("bulkSearch").value = "";
+      $("bulkSelectAll").checked = false;
+      $("bulkResult").textContent = "";
+      $("secStudent").classList.add("hidden");
+      $("secEntry").classList.add("hidden");
+      $("secBulk").classList.remove("hidden");
+      $("secBulk").classList.add("fade-in");
+      renderBulkCategories();
+      renderBulkReasonChips();
+      renderBulkStudents();
+      $("secBulk").scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
+    function exitBulk() {
+      bulkActive = false;
+      $("secBulk").classList.add("hidden");
+      $("secStudent").classList.remove("hidden");
+    }
+
+    function renderBulkCategories() {
+      $("bulkCategoryChips").innerHTML = config.categories.map(function (c) {
+        var on = c === bulkCategory;
+        return '<button data-cat="' + esc(c) + '" class="bcat-btn px-3.5 py-2 rounded-full text-sm border ' +
+          (on ? "bg-indigo-600 text-white border-indigo-600" : "bg-white text-slate-600 border-slate-300 hover:border-indigo-400") +
+          '">' + esc(c) + "</button>";
+      }).join("");
+      Array.prototype.forEach.call(document.querySelectorAll(".bcat-btn"), function (btn) {
+        btn.addEventListener("click", function () { bulkCategory = btn.getAttribute("data-cat"); renderBulkCategories(); });
+      });
+    }
+
+    function renderBulkReasonChips() {
+      $("bulkReasonChips").innerHTML = config.reasons.map(function (r) {
+        return '<button data-reason="' + esc(r) + '" class="breason-btn px-3 py-1.5 rounded-full text-xs bg-slate-100 text-slate-600 hover:bg-slate-200">+ ' + esc(r) + "</button>";
+      }).join("");
+      Array.prototype.forEach.call(document.querySelectorAll(".breason-btn"), function (btn) {
+        btn.addEventListener("click", function () {
+          var ta = $("bulkReason"), val = btn.getAttribute("data-reason");
+          ta.value = ta.value ? (ta.value.replace(/\s*$/, "") + ", " + val) : val;
+        });
+      });
+    }
+
+    function renderBulkStudents() {
+      var sinif = $("selClass").value;
+      var q = ($("bulkSearch").value || "").toLocaleLowerCase("tr");
+      var list = studentsOf(sinif).filter(function (s) {
+        if (!q) return true;
+        return (s.ad.toLocaleLowerCase("tr").indexOf(q) !== -1) || (String(s.no).indexOf(q) !== -1);
+      });
+      $("bulkStudentList").innerHTML = list.map(function (s) {
+        var checked = bulkSelected[bulkKey(s)] ? "checked" : "";
+        return '<label class="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer">' +
+          '<input type="checkbox" class="bstu-cb rounded" data-no="' + esc(s.no) + '" data-ad="' + esc(s.ad) + '" ' + checked + ' />' +
+          '<span class="inline-block w-12 text-xs text-slate-400 tabular-nums">' + esc(s.no) + "</span>" +
+          '<span class="font-medium">' + esc(s.ad) + "</span></label>";
+      }).join("") || '<p class="text-sm text-slate-400 py-4 text-center">Öğrenci yok.</p>';
+      Array.prototype.forEach.call(document.querySelectorAll(".bstu-cb"), function (cb) {
+        cb.addEventListener("change", function () {
+          var s = { no: cb.getAttribute("data-no"), ad: cb.getAttribute("data-ad") };
+          if (cb.checked) bulkSelected[bulkKey(s)] = s; else delete bulkSelected[bulkKey(s)];
+          updateBulkCount();
+        });
+      });
+      updateBulkCount();
+    }
+
+    function updateBulkCount() {
+      var n = Object.keys(bulkSelected).length;
+      $("btnBulkSave").textContent = n ? ("💾 " + n + " öğrenciye kaydet") : "💾 Seçili öğrencilere kaydet";
+    }
+
+    function bulkSave() {
+      var sinif = $("selClass").value;
+      var secili = Object.keys(bulkSelected).map(function (k) { return bulkSelected[k]; });
+      var grade = $("bulkGrade").value.trim();
+      if (!bulkCategory) { $("bulkResult").innerHTML = '<span class="text-amber-600">Bir kategori seçin.</span>'; return; }
+      if (grade === "") { $("bulkResult").innerHTML = '<span class="text-amber-600">Not (puan) girin.</span>'; return; }
+      var gn = Number(grade);
+      if (!isNaN(gn) && (gn < 0 || gn > 100)) { $("bulkResult").innerHTML = '<span class="text-amber-600">Not 0–100 arası olmalı.</span>'; return; }
+      if (!secili.length) { $("bulkResult").innerHTML = '<span class="text-amber-600">En az bir öğrenci seçin.</span>'; return; }
+
+      var payload = {
+        action: "notTopluYaz", sinif: sinif, kategori: bulkCategory,
+        not: grade, gerekce: $("bulkReason").value.trim(), ogretmen: config.teacher || "",
+        ogrenciler: secili.map(function (s) { return { no: s.no, ad: s.ad }; })
+      };
+
+      if (isDemo || !config.url) { $("bulkResult").innerHTML = '<span class="text-amber-600">Demo modunda kayıt yapılmaz. Ayarlardan bağlantı girin.</span>'; return; }
+
+      var btn = $("btnBulkSave");
+      btn.disabled = true; btn.textContent = "Kaydediliyor…";
+      apiPost(payload).then(function (res) {
+        if (res && res.ok) {
+          setNetDot("ok");
+          $("bulkResult").innerHTML = '<span class="text-emerald-600">✓ ' + (res.yazilan != null ? res.yazilan : secili.length) + " öğrenciye " + esc(bulkCategory) + ": " + esc(grade) + " yazıldı.</span>";
+          toast("✓ " + (res.yazilan != null ? res.yazilan : secili.length) + " öğrenciye kaydedildi");
+          bulkSelected = {}; $("bulkGrade").value = ""; $("bulkReason").value = ""; $("bulkSelectAll").checked = false; bulkCategory = null;
+          renderBulkCategories(); renderBulkStudents();
+          flushQueue();
+        } else { throw new Error((res && res.error) || "Sunucu hatası"); }
+      }).catch(function () {
+        var q = loadQueue(); q.push({ payload: payload, ts: Date.now() }); saveQueue(q);
+        setNetDot("off"); updateQueueFooter();
+        $("bulkResult").innerHTML = '<span class="text-amber-600">Bağlantı yok — ' + secili.length + " kayıt kuyruğa alındı, sonra gönderilecek.</span>";
+        bulkSelected = {}; $("bulkGrade").value = ""; $("bulkReason").value = ""; $("bulkSelectAll").checked = false;
+        renderBulkStudents();
+      }).then(function () { btn.disabled = false; updateBulkCount(); });
+    }
+
     // ---------- Olaylar ----------
     $("selClass").addEventListener("change", function () {
       selectedStudent = null;
       $("secEntry").classList.add("hidden");
       $("studentSearch").value = "";
       renderStudents();
+      if (bulkActive) { bulkSelected = {}; $("bulkSelectAll").checked = false; $("bulkClassName").textContent = $("selClass").value; renderBulkStudents(); }
     });
     $("studentSearch").addEventListener("input", renderStudents);
     $("btnChangeStudent").addEventListener("click", function () {
       $("secStudent").scrollIntoView({ behavior: "smooth", block: "start" });
     });
     $("btnSave").addEventListener("click", save);
+
+    $("btnBulkMode").addEventListener("click", enterBulk);
+    $("btnBulkExit").addEventListener("click", exitBulk);
+    $("bulkSearch").addEventListener("input", renderBulkStudents);
+    $("bulkSelectAll").addEventListener("change", function () {
+      var sinif = $("selClass").value;
+      if (this.checked) { studentsOf(sinif).forEach(function (s) { bulkSelected[bulkKey(s)] = { no: s.no, ad: s.ad }; }); }
+      else { bulkSelected = {}; }
+      renderBulkStudents();
+    });
+    $("btnBulkSave").addEventListener("click", bulkSave);
 
     $("btnSettings").addEventListener("click", openSettings);
     $("btnCloseSettings").addEventListener("click", closeSettings);

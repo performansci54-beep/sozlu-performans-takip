@@ -68,6 +68,10 @@ function doPost(e) {
       return _rosterYaz(data.roster || []);
     }
 
+    if (data.action === "notTopluYaz") {
+      return _topluNotYaz(data);
+    }
+
     // Not kaydı
     if (!data.sinif || !data.ogrenci || !data.kategori) {
       return _json({ ok: false, error: "Eksik alan (sınıf, öğrenci veya kategori)" });
@@ -145,17 +149,73 @@ function _kategoriSutunu(sheet, kategori, ogrRow) {
     if (v === "" || v === null) return catCols[i].col;
   }
 
-  // Yeni sütun aç
-  var yeniBaslik = kategori + "-" + (maxN + 1);
-  var hedef;
-  if (sonCatCol > 0) {
-    sheet.insertColumnAfter(sonCatCol);   // grubu bir arada tut
-    hedef = sonCatCol + 1;
-  } else {
-    hedef = Math.max(sheet.getLastColumn(), 2) + 1; // yeni kategori: en sağa
+  // Hepsi dolu → grubun sonuna yeni numaralı sütun
+  return _yeniKategoriSutunu(sheet, kategori);
+}
+
+/**
+ * Kategori grubunun sonuna yeni numaralı bir sütun ekler ve kolon numarasını döndürür.
+ * (Toplu girişte ve _kategoriSutunu'nun "hepsi dolu" durumunda kullanılır.)
+ */
+function _yeniKategoriSutunu(sheet, kategori) {
+  var lastCol = Math.max(sheet.getLastColumn(), 2);
+  var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+  var re = new RegExp("^" + _regexKacir(kategori) + "-(\\d+)$");
+  var maxN = 0, sonCatCol = -1;
+  for (var c = 0; c < headers.length; c++) {
+    var m = re.exec(String(headers[c]).trim());
+    if (m) { var n = parseInt(m[1], 10); if (n > maxN) maxN = n; if (c + 1 > sonCatCol) sonCatCol = c + 1; }
   }
-  sheet.getRange(1, hedef).setValue(yeniBaslik).setFontWeight("bold");
+  var hedef;
+  if (sonCatCol > 0) { sheet.insertColumnAfter(sonCatCol); hedef = sonCatCol + 1; }
+  else { hedef = Math.max(sheet.getLastColumn(), 2) + 1; }
+  sheet.getRange(1, hedef).setValue(kategori + "-" + (maxN + 1)).setFontWeight("bold");
   return hedef;
+}
+
+/* ==================== Toplu not yazma ==================== */
+/**
+ * Seçili öğrencilerin hepsine aynı notu tek bir yeni sütuna yazar.
+ * data: { sinif, kategori, not, gerekce, ogretmen, ogrenciler:[{no,ad}] }
+ */
+function _topluNotYaz(data) {
+  var ogrenciler = data.ogrenciler || [];
+  if (!data.sinif || !data.kategori || !ogrenciler.length) {
+    return _json({ ok: false, error: "Eksik alan (sınıf, kategori veya öğrenci)" });
+  }
+  var sheet = _sinifSekmesi(data.sinif);
+
+  // Öğrenci satırlarını hazırla (yoksa ekle)
+  var satirlar = [];
+  for (var i = 0; i < ogrenciler.length; i++) {
+    var o = ogrenciler[i];
+    var row = _ogrenciSatiri(sheet, o.no, o.ad);
+    if (row === -1) { sheet.appendRow([o.no || "", o.ad || ""]); row = sheet.getLastRow(); }
+    satirlar.push({ row: row, no: o.no || "", ad: o.ad || "" });
+  }
+
+  // Toplu giriş: herkese tek ortak sütun
+  var col = _yeniKategoriSutunu(sheet, data.kategori);
+
+  var deger = (data.not === undefined || data.not === null) ? "" : data.not;
+  var num = Number(deger);
+  var yazilacak = (deger !== "" && !isNaN(num) && String(deger).trim() !== "") ? num : deger;
+
+  var tarih = Utilities.formatDate(new Date(), _tz(), "yyyy-MM-dd HH:mm");
+  var notParca = [];
+  if (data.gerekce) notParca.push(data.gerekce);
+  notParca.push(tarih + (data.ogretmen ? "  •  " + data.ogretmen : ""));
+  var notStr = notParca.join("\n");
+
+  var log = _logSayfasi();
+  for (var j = 0; j < satirlar.length; j++) {
+    var cell = sheet.getRange(satirlar[j].row, col);
+    cell.setValue(yazilacak);
+    cell.setNote(notStr);
+    log.appendRow([tarih, data.sinif, satirlar[j].no, satirlar[j].ad, data.kategori, deger, data.gerekce || "", data.ogretmen || ""]);
+  }
+
+  return _json({ ok: true, yazilan: satirlar.length, sutun: col });
 }
 
 /* ==================== Öğrenci listesi yazma ==================== */
