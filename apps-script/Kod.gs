@@ -343,3 +343,23 @@ function _regexKacir(s) {
 function _json(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
 }
+
+/**
+ * TEK SEFERLİK: Tüm sekmelerdeki "dondurulmuş sütun" çizgisini kaldırır.
+ * Apps Script editöründe fonksiyon listesinden `cizgileriKaldir` seçip
+ * Çalıştır (Run) deyin. Dağıtım (deploy) gerekmez, anında etki eder.
+ */
+function cizgileriKaldir() {
+  var sheets = SpreadsheetApp.getActiveSpreadsheet().getSheets();
+  var sayac = 0;
+  for (var i = 0; i < sheets.length; i++) {
+    try {
+      if (sheets[i].getFrozenColumns() > 0) { sheets[i].setFrozenColumns(0); sayac++; }
+    } catch (e) {}
+  }
+  try {
+    SpreadsheetApp.getActiveSpreadsheet().toast(
+      sayac + " sekmedeki sütun çizgisi kaldırıldı.", "Tamam", 6);
+  } catch (e) {}
+  return sayac;
+}
