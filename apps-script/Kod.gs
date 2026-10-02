@@ -20,6 +20,7 @@
  * Kurulum adımları için depodaki KURULUM.md dosyasına bakın.
  */
 
+var SURUM          = "2026-10-02 • frozen0"; // dağıtılan kodu doğrulamak için (ping yanıtında görünür)
 var LOG_SAYFA      = "Gerekçeler";
 var KATEGORI_SAYFA = "Kategoriler";
 var LOG_BASLIKLARI = ["Tarih", "Sınıf", "No", "Ad Soyad", "Kategori", "Not", "Gerekçe", "Öğretmen"];
@@ -44,7 +45,7 @@ function kurEt() {
 function doGet(e) {
   var action = (e && e.parameter && e.parameter.action) || "roster";
   try {
-    if (action === "ping")   return _json({ ok: true, count: _rosterAl().length });
+    if (action === "ping")   return _json({ ok: true, count: _rosterAl().length, surum: SURUM });
     if (action === "roster") return _json({ ok: true, roster: _rosterAl(), categories: _kategorilerAl() });
     if (action === "history") {
       var limit = parseInt(e.parameter.limit || "5", 10);
