@@ -500,10 +500,12 @@
           loadHistory();
           flushQueue();
         } else {
-          throw new Error((res && res.error) || "Sunucu hatası");
+          // Sunucu yanıt verdi ama reddetti: KUYRUĞA ALMA (tekrar denemek düzeltmez), hatayı göster
+          setNetDot("ok");
+          toast("Sunucu reddetti: " + ((res && res.error) || "bilinmeyen hata"), "error");
         }
       }).catch(function () {
-        // Ağ hatası: kuyruğa al
+        // Gerçek ağ hatası: kuyruğa al
         var q = loadQueue(); q.push({ payload: p, ts: Date.now() }); saveQueue(q);
         setNetDot("off");
         toast("Bağlantı yok — kayıt kuyruğa alındı, sonra gönderilecek", "warn");
@@ -520,16 +522,25 @@
       if (!q.length || !config.url || isDemo) { updateQueueFooter(); return; }
       var next = q[0];
       apiPost(next.payload).then(function (res) {
-        if (res && res.ok) {
-          q.shift(); saveQueue(q); updateQueueFooter();
-          if (q.length) flushQueue();
-        }
-      }).catch(function () { /* bir sonraki fırsatta */ });
+        // ok ise gönderildi; ok:false ise sunucu reddetti (tekrar denemek düzeltmez) — her iki durumda kuyruktan çıkar
+        q.shift(); saveQueue(q); updateQueueFooter();
+        if (q.length) flushQueue();
+      }).catch(function () { /* ağ hatası: bir sonraki fırsatta tekrar dene */ });
+    }
+
+    function clearQueue() {
+      var q = loadQueue();
+      if (!q.length) return;
+      if (window.confirm(q.length + " bekleyen kayıt silinsin mi? (Gönderilmemiş toplu/tekli girişler kaybolur)")) {
+        saveQueue([]); updateQueueFooter();
+        toast("Bekleyen kayıtlar temizlendi");
+      }
     }
 
     function updateQueueFooter() {
       var q = loadQueue();
-      $("queueFooter").textContent = q.length ? ("⏳ " + q.length + " kayıt gönderilmeyi bekliyor") : "";
+      $("queueFooter").textContent = q.length ? ("⏳ " + q.length + " kayıt bekliyor — temizlemek için dokunun") : "";
+      $("queueFooter").style.cursor = q.length ? "pointer" : "default";
     }
 
     // ---------- Ayarlar modalı ----------
@@ -837,7 +848,12 @@
           bulkSelected = {}; $("bulkGrade").value = ""; $("bulkReason").value = ""; $("bulkSelectAll").checked = false; bulkCategory = null;
           renderBulkCategories(); renderBulkStudents();
           flushQueue();
-        } else { throw new Error((res && res.error) || "Sunucu hatası"); }
+        } else {
+          // Sunucu reddetti: KUYRUĞA ALMA, gerçek hatayı göster (çoğunlukla: dağıtılan kod toplu girişi tanımıyor)
+          setNetDot("ok");
+          $("bulkResult").innerHTML = '<span class="text-red-600">Sunucu reddetti: ' + esc((res && res.error) || "bilinmeyen") +
+            ". Apps Script kodunu güncelleyip <b>yeni sürüm</b> dağıttınız mı? (ping sürümü: 2026-10-02 • toplu-giris)</span>";
+        }
       }).catch(function () {
         var q = loadQueue(); q.push({ payload: payload, ts: Date.now() }); saveQueue(q);
         setNetDot("off"); updateQueueFooter();
@@ -891,6 +907,8 @@
       Array.prototype.forEach.call(cbs, function (cb) { cb.checked = !allOn; });
     });
     $("btnImport").addEventListener("click", doImport);
+
+    $("queueFooter").addEventListener("click", clearQueue);
 
     window.addEventListener("online", function () { setNetDot("ok"); flushQueue(); });
     window.addEventListener("offline", function () { setNetDot("off"); });

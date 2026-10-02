@@ -20,7 +20,7 @@
  * Kurulum adımları için depodaki KURULUM.md dosyasına bakın.
  */
 
-var SURUM          = "2026-10-02 • frozen0"; // dağıtılan kodu doğrulamak için (ping yanıtında görünür)
+var SURUM          = "2026-10-02 • toplu-giris"; // dağıtılan kodu doğrulamak için (ping yanıtında görünür)
 var LOG_SAYFA      = "Gerekçeler";
 var KATEGORI_SAYFA = "Kategoriler";
 var LOG_BASLIKLARI = ["Tarih", "Sınıf", "No", "Ad Soyad", "Kategori", "Not", "Gerekçe", "Öğretmen"];
